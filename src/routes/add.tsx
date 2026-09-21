@@ -78,14 +78,14 @@ ${text}` }] }]
         break;
       } catch (e: any) {
         const errorStr = String(e?.message || e);
-        if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('High demand') || errorStr.includes('fetch')) {
+        if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('High demand') || errorStr.includes('fetch') || errorStr.toLowerCase().includes('quota') || errorStr.includes('429') || errorStr.toLowerCase().includes('rate limit')) {
           retries--;
           if (retries === 0) {
-            alert("Google AI servers are currently too busy. Please try again later.");
+            alert("Google AI API limit reached. Please wait about 30 seconds and try again.");
             break;
           }
           await new Promise(r => setTimeout(r, delay));
-          delay += 2000;
+          delay += 5000; // Increase delay significantly for quota errors (5s, 10s, 15s)
         } else {
           alert("AI Extraction failed: " + errorStr);
           break;
