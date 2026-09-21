@@ -104,7 +104,7 @@ export const extractWithAI = createServerFn({ method: "POST" })
     }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: `You are a helpful assistant. Extract job applications from the following text. 
 Return ONLY a valid JSON array where each object has these exact keys: "company" (string), "role" (string), "date" (string, YYYY-MM-DD), and "platform" (string, one of: "LinkedIn", "Naukri", "Indeed", "Company site", "Referral").
 Do not include markdown blocks like \`\`\`json. Return just the raw JSON array. If the date is relative (like "22h ago"), calculate it relative to today (${new Date().toISOString().split('T')[0]}).
