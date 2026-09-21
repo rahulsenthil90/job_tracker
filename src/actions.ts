@@ -103,15 +103,34 @@ export const extractWithAI = createServerFn({ method: "POST" })
       throw new Error("GEMINI_API_KEY environment variable is missing.");
     }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
-      contents: `You are a helpful assistant. Extract job applications from the following text. 
+    
+    let response;
+    let retries = 3;
+    let delay = 1000;
+
+    while (retries > 0) {
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: `You are a helpful assistant. Extract job applications from the following text. 
 Return ONLY a valid JSON array where each object has these exact keys: "company" (string), "role" (string), "date" (string, YYYY-MM-DD), and "platform" (string, one of: "LinkedIn", "Naukri", "Indeed", "Company site", "Referral").
 Do not include markdown blocks like \`\`\`json. Return just the raw JSON array. If the date is relative (like "22h ago"), calculate it relative to today (${new Date().toISOString().split('T')[0]}).
 
 Text to extract:
 ${data.text}`,
-    });
+        });
+        break; // Success
+      } catch (e: any) {
+        if (e.message?.includes('503') || e.status === 'UNAVAILABLE' || e.message?.includes('UNAVAILABLE')) {
+          retries--;
+          if (retries === 0) throw new Error("Google AI servers are currently too busy (High Demand). Please wait a few seconds and try again.");
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2; // Exponential backoff
+        } else {
+          throw e;
+        }
+      }
+    }
     
     try {
       // Clean up markdown if the AI includes it anyway
