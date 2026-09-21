@@ -1,0 +1,3 @@
+- [x] Build the approved Jobdesk tracker screens and interactions.
+- [x] Implement pasted-text extraction into editable application fields.
+- [x] Verify desktop and mobile behavior.
