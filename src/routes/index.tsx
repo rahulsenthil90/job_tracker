@@ -40,10 +40,10 @@ function Overview() {
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{["All", "LinkedIn", "Naukri", "Indeed", "Company site", "Referral"].map((item) => <Button key={item} size="sm" variant={platform === item ? "secondary" : "outline"} className="shrink-0" onClick={() => setPlatform(item)}>{item}</Button>)}</div>
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[['Active', applications.filter(a => a.status === 'Applied' || a.status === 'Screening').length.toString(), 'text-foreground'],
-          ['Interviews', applications.filter(a => a.status === 'Interview').length.toString(), 'text-primary'],
-          ['Offers', applications.filter(a => a.status === 'Offer').length.toString(), 'text-success'],
-          ['Response rate', applications.length > 0 ? `${Math.round((applications.filter(a => ['Screening', 'Interview', 'Offer'].includes(a.status)).length / applications.length) * 100)}%` : '0%', 'text-foreground']
+        {[['Active', visible.filter(a => a.status === 'Applied' || a.status === 'Screening').length.toString(), 'text-foreground'],
+          ['Interviews', visible.filter(a => a.status === 'Interview').length.toString(), 'text-primary'],
+          ['Offers', visible.filter(a => a.status === 'Offer').length.toString(), 'text-success'],
+          ['Response rate', visible.length > 0 ? `${Math.round((visible.filter(a => ['Screening', 'Interview', 'Offer'].includes(a.status)).length / visible.length) * 100)}%` : '0%', 'text-foreground']
         ].map(([label,value,tone]) => <Surface key={label} className="rise p-4"><p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p><p className={cn("mt-1 font-heading text-2xl font-semibold", tone)}>{value}</p></Surface>)}
       </div>
       <section className="mt-7"><div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3"><div><h2 className="font-heading text-base font-medium">Recent applications</h2><p className="text-xs text-muted-foreground">Sorted by activity</p></div><span className="text-xs text-muted-foreground">{visible.length} shown</span></div>
