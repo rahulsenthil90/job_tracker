@@ -111,7 +111,7 @@ export const extractWithAI = createServerFn({ method: "POST" })
     while (retries > 0) {
       try {
         response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3.6-flash',
           contents: `You are a helpful assistant. Extract job applications from the following text. 
 Return ONLY a valid JSON array where each object has these exact keys: "company" (string), "role" (string), "date" (string, YYYY-MM-DD), and "platform" (string, one of: "LinkedIn", "Naukri", "Indeed", "Company site", "Referral").
 Do not include markdown blocks like \`\`\`json. Return just the raw JSON array. If the date is relative (like "22h ago"), calculate it relative to today (${new Date().toISOString().split('T')[0]}).
@@ -121,13 +121,14 @@ ${data.text}`,
         });
         break; // Success
       } catch (e: any) {
-        if (e.message?.includes('503') || e.status === 'UNAVAILABLE' || e.message?.includes('UNAVAILABLE')) {
+        const errorStr = String(e?.message || e);
+        if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('High demand')) {
           retries--;
-          if (retries === 0) throw new Error("Google AI servers are currently too busy (High Demand). Please wait a few seconds and try again.");
+          if (retries === 0) throw new Error("Google AI servers are currently too busy (High Demand). Please try again later.");
           await new Promise(r => setTimeout(r, delay));
-          delay *= 2; // Exponential backoff
+          delay += 2000; // Linear backoff
         } else {
-          throw e;
+          throw e; // Throw immediately if it's a 404 or other error
         }
       }
     }
