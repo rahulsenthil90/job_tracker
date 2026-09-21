@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { getCookie, setCookie, deleteCookie } from "vinxi/http";
+import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
 
 const COOKIE_NAME = "job_portal_session";
 

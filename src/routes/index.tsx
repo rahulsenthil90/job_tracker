@@ -40,7 +40,11 @@ function Overview() {
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{["All", "LinkedIn", "Naukri", "Indeed", "Company site", "Referral"].map((item) => <Button key={item} size="sm" variant={platform === item ? "secondary" : "outline"} className="shrink-0" onClick={() => setPlatform(item)}>{item}</Button>)}</div>
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[['Active','6','text-foreground'],['Interviews','2','text-primary'],['Offers','1','text-success'],['Response rate','43%','text-foreground']].map(([label,value,tone]) => <Surface key={label} className="rise p-4"><p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p><p className={cn("mt-1 font-heading text-2xl font-semibold", tone)}>{value}</p></Surface>)}
+        {[['Active', applications.filter(a => a.status === 'Applied' || a.status === 'Screening').length.toString(), 'text-foreground'],
+          ['Interviews', applications.filter(a => a.status === 'Interview').length.toString(), 'text-primary'],
+          ['Offers', applications.filter(a => a.status === 'Offer').length.toString(), 'text-success'],
+          ['Response rate', applications.length > 0 ? `${Math.round((applications.filter(a => ['Screening', 'Interview', 'Offer'].includes(a.status)).length / applications.length) * 100)}%` : '0%', 'text-foreground']
+        ].map(([label,value,tone]) => <Surface key={label} className="rise p-4"><p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p><p className={cn("mt-1 font-heading text-2xl font-semibold", tone)}>{value}</p></Surface>)}
       </div>
       <section className="mt-7"><div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3"><div><h2 className="font-heading text-base font-medium">Recent applications</h2><p className="text-xs text-muted-foreground">Sorted by activity</p></div><span className="text-xs text-muted-foreground">{visible.length} shown</span></div>
         <div className="space-y-3">{visible.map((item) => <Link key={item.id} to="/applications/$id" params={{ id: item.id }} className="rise grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-border bg-card/75 p-4 transition hover:-translate-y-0.5 hover:shadow-sm">

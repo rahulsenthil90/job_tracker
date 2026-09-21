@@ -3,7 +3,7 @@ import { db } from "./server/db";
 import { applications as applicationsTable, users, sessions } from "./server/schema";
 import { eq, and } from "drizzle-orm";
 import { Application } from "@/lib/applications";
-import { hashPassword, generateSessionId, getSessionToken, setSessionToken, clearSessionToken } from "./lib/auth";
+import { hashPassword, generateSessionId, getSessionToken, setSessionToken, clearSessionToken } from "./server/auth";
 
 export const getSessionUser = createServerFn({ method: "GET" })
   .handler(async () => {

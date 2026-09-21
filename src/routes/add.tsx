@@ -34,7 +34,37 @@ function detectPlatform(chunk: string): Platform {
 
 function detectDate(chunk: string): string {
   const iso = /\b(20\d{2}-\d{2}-\d{2})\b/.exec(chunk);
-  return iso?.[1] ?? today;
+  if (iso) return iso[1];
+
+  const lower = chunk.toLowerCase();
+  
+  // Extract patterns like "sent 2 weeks ago", "applied yesterday", etc.
+  // Look for relative time phrases
+  const relativeMatch = /(?:sent|applied)?\s*(today|yesterday|(\d+)\s*(day|week|month)s?\s*ago)/i.exec(lower);
+  
+  if (relativeMatch) {
+    const d = new Date(today); // Use 'today' constant ("2026-09-21") as base for consistency
+    const match = relativeMatch[1];
+    
+    if (match === "today") {
+      // do nothing
+    } else if (match === "yesterday") {
+      d.setDate(d.getDate() - 1);
+    } else {
+      const num = parseInt(relativeMatch[2] || "0", 10);
+      const unit = relativeMatch[3];
+      if (unit === "day") {
+        d.setDate(d.getDate() - num);
+      } else if (unit === "week") {
+        d.setDate(d.getDate() - (num * 7));
+      } else if (unit === "month") {
+        d.setMonth(d.getMonth() - num);
+      }
+    }
+    return d.toISOString().split("T")[0];
+  }
+  
+  return today;
 }
 
 // Split one big paste into separate listings. New listings start on a blank line,
@@ -90,6 +120,53 @@ function AddApplication() {
   const [saved, setSaved] = useState(false);
 
   const extract = (source = text) => {
+    if (/<\/?div|span|p|a|li|ul/i.test(source)) {
+      const doc = new DOMParser().parseFromString(source, "text/html");
+      const naukriTuples = doc.querySelectorAll('.jdTupleContainer, .jobTuple');
+      const linkedinTuples = doc.querySelectorAll('.job-card-container, .base-search-card, .jobs-search-results__list-item');
+      
+      let elements = [];
+      let platform: Platform = "Company site";
+      
+      if (naukriTuples.length > 0) {
+        elements = Array.from(naukriTuples);
+        platform = "Naukri";
+      } else if (linkedinTuples.length > 0) {
+        elements = Array.from(linkedinTuples);
+        platform = "LinkedIn";
+      }
+
+      if (elements.length > 0) {
+        const extracted = elements.map(t => {
+          let role = "";
+          let company = "";
+          
+          if (platform === "Naukri") {
+            role = (t.querySelector('.jdTitle, .title') as HTMLElement)?.textContent || "";
+            company = (t.querySelector('.company, .subTitle') as HTMLElement)?.textContent || "";
+          } else if (platform === "LinkedIn") {
+            role = (t.querySelector('.job-card-list__title, .base-search-card__title, .artdeco-entity-lockup__title, .sr-only') as HTMLElement)?.textContent || "";
+            company = (t.querySelector('.job-card-container__company-name, .base-search-card__subtitle, .artdeco-entity-lockup__subtitle') as HTMLElement)?.textContent || "";
+          }
+          
+          const rawText = t.textContent || "";
+          return {
+            id: nextId++,
+            company: company.trim() || "Unknown Company",
+            role: role.trim().replace(/\n/g, "").replace(/\s{2,}/g, " ") || "Unknown Role",
+            date: detectDate(rawText),
+            platform,
+          };
+        });
+        setEntries(extracted);
+        return;
+      }
+      
+      // Fallback: convert HTML to text preserving block newlines
+      let htmlWithNewlines = source.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(div|p|h1|h2|h3|h4|h5|h6|li)>/gi, "\n");
+      source = new DOMParser().parseFromString(htmlWithNewlines, "text/html").body.textContent || source;
+    }
+
     const chunks = splitListings(source);
     setEntries(chunks.length > 0 ? chunks.map(parseChunk) : [parseChunk(source)]);
   };
@@ -133,7 +210,7 @@ function AddApplication() {
       <div className="mb-5 flex w-fit gap-1 rounded-md border border-border bg-card/75 p-1"><Button size="sm" variant={mode === "text" ? "default" : "ghost"} onClick={() => setMode("text")}><ClipboardPaste />Paste text</Button><Button size="sm" variant={mode === "image" ? "default" : "ghost"} onClick={() => setMode("image")}><FileImage />Image</Button></div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
         <Surface className="p-5"><div className="mb-4"><h2 className="font-heading font-medium">Source</h2><p className="text-xs text-muted-foreground">Paste several applications at once — separate them with a blank line, a --- line, or numbering (1. 2. 3.).</p></div>
-          {mode === "text" ? <><Textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 10000))} className="min-h-72 resize-none bg-background/70" placeholder={'Paste copied job text here — one or many listings.\n\nExample:\nSenior Product Designer at Northwind Studio\nApplied via LinkedIn\n\nFrontend Engineer at Cobalt Labs\nApplied via Naukri on 2026-09-17'} /><div className="mt-3 flex items-center justify-between"><span className="text-xs text-muted-foreground">{text.length}/10000</span><Button onClick={() => extract()} disabled={!text.trim()}><ScanText />Extract details</Button></div></> : preview ? <div className="relative overflow-hidden rounded-md border border-border bg-secondary"><img src={preview} alt="Pasted job listing" className="max-h-80 w-full object-contain" /><Button variant="outline" size="icon" className="absolute right-2 top-2 bg-card" onClick={() => { setPreview(null); setEntries([]); }} aria-label="Remove image"><X /></Button></div> : <label className="grid min-h-72 cursor-pointer place-items-center rounded-md border border-dashed border-border bg-secondary/50 p-8 text-center"><span><ImagePlus className="mx-auto size-8 text-primary" /><span className="mt-3 block font-heading font-medium">Paste or upload an image</span><span className="mt-1 block text-xs text-muted-foreground">Use a screenshot from LinkedIn, Naukri, Indeed, or a company site.</span></span><input type="file" accept="image/*" className="sr-only" onChange={onFile} /></label>}
+          {mode === "text" ? <><Textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 1000000))} className="min-h-72 resize-none bg-background/70" placeholder={'Paste copied job text here — one or many listings.\n\nExample:\nSenior Product Designer at Northwind Studio\nApplied via LinkedIn\n\nFrontend Engineer at Cobalt Labs\nApplied via Naukri on 2026-09-17'} /><div className="mt-3 flex items-center justify-between"><span className="text-xs text-muted-foreground">{text.length}/1000000</span><Button onClick={() => extract()} disabled={!text.trim()}><ScanText />Extract details</Button></div></> : preview ? <div className="relative overflow-hidden rounded-md border border-border bg-secondary"><img src={preview} alt="Pasted job listing" className="max-h-80 w-full object-contain" /><Button variant="outline" size="icon" className="absolute right-2 top-2 bg-card" onClick={() => { setPreview(null); setEntries([]); }} aria-label="Remove image"><X /></Button></div> : <label className="grid min-h-72 cursor-pointer place-items-center rounded-md border border-dashed border-border bg-secondary/50 p-8 text-center"><span><ImagePlus className="mx-auto size-8 text-primary" /><span className="mt-3 block font-heading font-medium">Paste or upload an image</span><span className="mt-1 block text-xs text-muted-foreground">Use a screenshot from LinkedIn, Naukri, Indeed, or a company site.</span></span><input type="file" accept="image/*" className="sr-only" onChange={onFile} /></label>}
         </Surface>
         <Surface className="p-5"><div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="font-heading font-medium">Extracted details</h2><p className="text-xs text-muted-foreground">Review each application before saving.</p></div>{entries.length > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[11px] font-medium text-success"><Sparkles className="size-3" />{entries.length} ready</span>}</div>
           {entries.length === 0 ? <p className="rounded-md border border-dashed border-border bg-secondary/40 p-6 text-center text-xs text-muted-foreground">Nothing extracted yet. Paste text or an image on the left.</p> :

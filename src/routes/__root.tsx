@@ -127,12 +127,15 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { useRouterState } from "@tanstack/react-router";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isAuthRoute = useRouterState({ select: (s) => s.location.pathname === "/login" });
 
   return (
     <QueryClientProvider client={queryClient}>
-      <JobdeskShell><Outlet /></JobdeskShell>
+      {isAuthRoute ? <Outlet /> : <JobdeskShell><Outlet /></JobdeskShell>}
     </QueryClientProvider>
   );
 }

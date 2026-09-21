@@ -28,8 +28,8 @@ export function JobdeskShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="mt-auto space-y-3">
             <div className="rounded-lg bg-highlight/70 p-3">
-              <div className="flex items-center gap-2 font-heading text-[13px] font-medium"><Sparkles className="size-3.5 text-primary" />This week</div>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">2 interviews, 1 offer in view.</p>
+              <div className="flex items-center gap-2 font-heading text-[13px] font-medium"><Sparkles className="size-3.5 text-primary" />Track your progress</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Keep tracking your applications to see your success rate.</p>
             </div>
             <button onClick={async () => {
               const { logout } = await import('@/actions');

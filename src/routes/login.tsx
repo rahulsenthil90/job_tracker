@@ -29,8 +29,6 @@ function Login() {
     setLoading(true);
 
     try {
-      // In a real app we'd hash on the server, but our action expects passwordHash.
-      // We will just pass the password string to the passwordHash field for now.
       if (isRegistering) {
         await register({ data: { username, passwordHash: password } });
       } else {
@@ -45,54 +43,65 @@ function Login() {
   };
 
   return (
-    <>
-      <PageHeader title={isRegistering ? "Create an account" : "Welcome back"} subtitle="Manage your job applications" />
-      <div className="mx-auto max-w-md px-4 py-16">
-        <Surface className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="flex min-h-screen flex-col justify-center bg-background py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground">
+          J
+        </div>
+        <h2 className="mt-6 text-center font-heading text-2xl font-bold leading-9 tracking-tight text-foreground">
+          {isRegistering ? "Create your account" : "Welcome back"}
+        </h2>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          Manage your job applications with Jobdesk
+        </p>
+      </div>
+
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
+        <Surface className="px-6 py-12 shadow sm:rounded-xl sm:px-12">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-muted-foreground">Username</label>
+              <label className="block text-sm font-medium text-foreground">Username</label>
               <Input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1"
+                className="mt-2"
                 placeholder="Enter your username"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground">Password</label>
+              <label className="block text-sm font-medium text-foreground">Password</label>
               <Input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
+                className="mt-2"
                 placeholder="Enter your password"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : (isRegistering ? "Register" : "Login")}
+              {loading ? "Please wait..." : (isRegistering ? "Register" : "Sign in")}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               {isRegistering ? "Already have an account?" : "Don't have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => setIsRegistering(!isRegistering)}
-                className="font-medium text-primary hover:underline"
+                className="font-medium text-primary hover:underline focus:outline-none"
               >
-                {isRegistering ? "Login" : "Register"}
+                {isRegistering ? "Sign in" : "Register"}
               </button>
             </div>
           </form>
         </Surface>
       </div>
-    </>
+    </div>
   );
 }
