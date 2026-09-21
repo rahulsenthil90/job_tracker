@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, Surface } from "@/components/jobdesk-shell";
 import { type Application } from "@/lib/applications";
-import { addApplication, extractWithAI } from "@/actions";
+import { addApplication } from "@/actions";
 
 export const Route = createFileRoute("/add")({
   head: () => ({ meta: [
@@ -41,22 +41,58 @@ function AddApplication() {
   const handleAIExtract = async () => {
     if (!text.trim()) return;
     setExtractingAI(true);
-    try {
-      const res = await extractWithAI({ data: { text } });
-      if (res.success && res.data) {
-        setEntries(res.data.map((e: any) => ({
+    let retries = 5;
+    let delay = 2000;
+    while (retries > 0) {
+      try {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) throw new Error("VITE_GEMINI_API_KEY is missing in .env");
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `You are a helpful assistant. Extract job applications from the following text. 
+Return ONLY a valid JSON array where each object has these exact keys: "company" (string), "role" (string), "date" (string, YYYY-MM-DD), and "platform" (string, one of: "LinkedIn", "Naukri", "Indeed", "Company site", "Referral").
+Do not include markdown blocks like \`\`\`json. Return just the raw JSON array. If the date is relative (like "22h ago"), calculate it relative to today (${new Date().toISOString().split('T')[0]}).
+
+Text to extract:
+${text}` }] }]
+          })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || "API Error");
+        
+        let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+        responseText = responseText.replace(/^```(json)?/, "").replace(/```$/, "").trim();
+        const parsed = JSON.parse(responseText);
+        
+        setEntries(parsed.map((e: any) => ({
           id: nextId++,
           company: e.company || "Unknown",
           role: e.role || "Unknown",
           date: e.date || today,
           platform: e.platform || "LinkedIn"
         })));
+        break;
+      } catch (e: any) {
+        const errorStr = String(e?.message || e);
+        if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('High demand') || errorStr.includes('fetch')) {
+          retries--;
+          if (retries === 0) {
+            alert("Google AI servers are currently too busy. Please try again later.");
+            break;
+          }
+          await new Promise(r => setTimeout(r, delay));
+          delay += 2000;
+        } else {
+          alert("AI Extraction failed: " + errorStr);
+          break;
+        }
       }
-    } catch (e: any) {
-      alert("AI Extraction failed: " + e.message);
-    } finally {
-      setExtractingAI(false);
     }
+    setExtractingAI(false);
   };
 
   const updateEntry = (id: number, patch: Partial<Entry>) =>

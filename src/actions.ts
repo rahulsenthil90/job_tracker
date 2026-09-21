@@ -4,7 +4,7 @@ import { applications as applicationsTable, users, sessions } from "./server/sch
 import { eq, and } from "drizzle-orm";
 import { Application } from "@/lib/applications";
 import { hashPassword, generateSessionId, getSessionToken, setSessionToken, clearSessionToken } from "./server/auth";
-import { GoogleGenAI } from "@google/genai";
+
 export const getSessionUser = createServerFn({ method: "GET" })
   .handler(async () => {
     const token = getSessionToken();
@@ -94,52 +94,4 @@ export const deleteApplication = createServerFn({ method: "POST" })
     if (!user) throw new Error("Unauthorized");
     await db.delete(applicationsTable).where(and(eq(applicationsTable.id, data.id), eq(applicationsTable.userId, user.id)));
     return { success: true };
-  });
-
-export const extractWithAI = createServerFn({ method: "POST" })
-  .validator((data: { text: string }) => data)
-  .handler(async ({ data }) => {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY environment variable is missing.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    
-    let response;
-    let retries = 5;
-    let delay = 2000;
-
-    while (retries > 0) {
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: `You are a helpful assistant. Extract job applications from the following text. 
-Return ONLY a valid JSON array where each object has these exact keys: "company" (string), "role" (string), "date" (string, YYYY-MM-DD), and "platform" (string, one of: "LinkedIn", "Naukri", "Indeed", "Company site", "Referral").
-Do not include markdown blocks like \`\`\`json. Return just the raw JSON array. If the date is relative (like "22h ago"), calculate it relative to today (${new Date().toISOString().split('T')[0]}).
-
-Text to extract:
-${data.text}`,
-        });
-        break; // Success
-      } catch (e: any) {
-        const errorStr = String(e?.message || e);
-        if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('High demand')) {
-          retries--;
-          if (retries === 0) throw new Error("Google AI servers are currently too busy (High Demand). Please try again later.");
-          await new Promise(r => setTimeout(r, delay));
-          delay += 2000; // Linear backoff
-        } else {
-          throw e; // Throw immediately if it's a 404 or other error
-        }
-      }
-    }
-    
-    try {
-      // Clean up markdown if the AI includes it anyway
-      let text = response.text || "[]";
-      text = text.replace(/^```(json)?/, "").replace(/```$/, "").trim();
-      const parsed = JSON.parse(text);
-      return { success: true, data: parsed as Partial<Application>[] };
-    } catch (e) {
-      throw new Error("Failed to parse AI response: " + (response.text || "No response text"));
-    }
   });
